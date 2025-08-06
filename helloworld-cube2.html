@@ -19,11 +19,17 @@
       <div id="text">
         <h1>Hello World!</h1>
       </div>
+    </div>
+    <div id="controls">
+      <button id="shuffleBtn">Shuffle Colors</button>
+      <label>Frequency: <input id="freqSlider" type="range" min="60" max="600" value="80"></label>
+    </div>
   </div>
 </body>
 
 <style>
   #container {
+  flex-direction: column;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -109,6 +115,9 @@
     align-items: center;
   }
 
+  #controls {
+    margin-top: 20px;
+  }
 
 </style>
 
@@ -121,10 +130,31 @@ let perspective = 1000;
 
 // oscillator
 const audioCtx = new AudioContext();
-const oscillator = audioCtx.createOscillator();
-oscillator.type = 'square';
-oscillator.frequency.setValueAtTime(88, audioCtx.currentTime); // set the frequency to 440 Hz
-oscillator.connect(audioCtx.destination);
+const shuffleBtn = document.getElementById('shuffleBtn');
+const freqSlider = document.getElementById('freqSlider');
+let currentOscillator = null;
+
+function randomColor() {
+  const r = Math.floor(Math.random() * 256);
+  const g = Math.floor(Math.random() * 256);
+  const b = Math.floor(Math.random() * 256);
+  return `rgba(${r}, ${g}, ${b}, 0.5)`;
+}
+
+function shuffleColors() {
+  ['front', 'back', 'right', 'left', 'top', 'bottom'].forEach(id => {
+    document.getElementById(id).style.backgroundColor = randomColor();
+  });
+}
+
+shuffleBtn.addEventListener('click', shuffleColors);
+shuffleColors();
+
+freqSlider.addEventListener('input', () => {
+  if (currentOscillator) {
+    currentOscillator.frequency.setValueAtTime(freqSlider.value, audioCtx.currentTime);
+  }
+});
 
 // listeners
 container.addEventListener('mousemove', rotateCube);
@@ -203,7 +233,6 @@ cube.addEventListener('touchend', () => {
 
 cube.addEventListener('pointerdown', () => {
   perspective = 300;
-  const audioCtx = new AudioContext();
   const oscillator = audioCtx.createOscillator();
   const filter = audioCtx.createBiquadFilter();
   const lfo1 = audioCtx.createOscillator(); // create first LFO oscillator
@@ -211,7 +240,7 @@ cube.addEventListener('pointerdown', () => {
   const lfo2 = audioCtx.createOscillator(); // create second LFO oscillator
   const lfo2Gain = audioCtx.createGain(); // create second gain node to control second LFO intensity
   oscillator.type = 'square';
-  oscillator.frequency.setValueAtTime(80, audioCtx.currentTime);
+  oscillator.frequency.setValueAtTime(freqSlider.value, audioCtx.currentTime);
   filter.type = 'lowpass';
   filter.frequency.setValueAtTime(300, audioCtx.currentTime);
   lfo1.type = 'sine'; // set first LFO type to sine
@@ -229,11 +258,13 @@ cube.addEventListener('pointerdown', () => {
   oscillator.start();
   lfo1.start(); // start LFO1
   lfo2.start(); // start LFO2
+  currentOscillator = oscillator;
   cube.addEventListener('mouseup', () => {
     perspective = 1000;
     oscillator.stop();
     lfo1.stop(); // stop LFO1
     lfo2.stop(); // stop LFO2
+    currentOscillator = null;
   }, { once: true });
 });
 
